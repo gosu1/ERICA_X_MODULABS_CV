@@ -34,9 +34,11 @@ ERICA_X_MODULABS_CV
 ├── 08_Gen_Synthetic_data
 │   ├── 08_Gen_Synthetic_data.ipynb
 │   └── README.md
-└── 09_SlowPaper
-    ├── 09_SlowPaper.ipynb
-    └── README.md
+├── 09_SlowPaper
+│   ├── 09_SlowPaper.ipynb
+│   └── README.md
+└── 10_Project
+    └── PRFAQ.md
 ```
 
 #### 실습 목록
@@ -52,3 +54,4 @@ ERICA_X_MODULABS_CV
 | 07_Anomaly_detection | 이상 탐지 |
 | 08_Gen_Synthetic_data | 합성 데이터 생성 |
 | 09_SlowPaper | Slow Paper (논문 읽기) |
+| 10_Project | 프로젝트: 빈방 알리미 PR/FAQ |
