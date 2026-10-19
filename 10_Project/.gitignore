@@ -5,3 +5,6 @@ __pycache__/
 frames/
 snapshots/
 synthetic/out*/*.jpg
+*.avi
+*.tar
+*.mat
