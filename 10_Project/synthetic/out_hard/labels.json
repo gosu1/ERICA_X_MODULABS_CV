@@ -1,0 +1,418 @@
+{
+ "base_0800_A_0.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_A_1.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.909,
+  "review": "sleeping"
+ },
+ "base_0800_A_2.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.855,
+  "review": "none"
+ },
+ "base_0800_A_3.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_A_4.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_A_5.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_A_6.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_A_7.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_0.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.999,
+  "review": "person_other"
+ },
+ "base_0800_B_1.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_2.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_B_3.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_4.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.996,
+  "review": "person_other"
+ },
+ "base_0800_B_5.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.997,
+  "review": "person_other"
+ },
+ "base_0800_B_6.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_7.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 1.0,
+  "review": "person_other"
+ },
+ "base_0800_C_0.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_1.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 0.999,
+  "review": "artifact"
+ },
+ "base_0800_C_2.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_C_3.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_4.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_5.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "artifact"
+ },
+ "base_0800_C_6.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "artifact"
+ },
+ "base_0800_C_7.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_D_0.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 0.998,
+  "review": "sleeping"
+ },
+ "base_0800_D_1.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_D_2.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 1.0,
+  "review": "person_other"
+ },
+ "base_0800_D_3.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_D_4.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "a winter coat draped over the head and shoulders",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_D_5.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "a hoodie with the hood pulled over the head, face hidden",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_D_6.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "face buried completely in the arms, only the back of the hood visible",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 1.0,
+  "review": "person_other"
+ },
+ "base_0800_D_7.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "a blanket covering the head and back",
+  "mask_box": [
+   500,
+   170,
+   760,
+   380
+  ],
+  "clip_person": 0.02,
+  "review": "none"
+ }
+}

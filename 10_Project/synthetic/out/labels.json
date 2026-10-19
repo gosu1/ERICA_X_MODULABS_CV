@@ -1,0 +1,418 @@
+{
+ "base_0800_A_0.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "black hoodie",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_A_1.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.176,
+  "review": "person_other"
+ },
+ "base_0800_A_2.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_A_3.jpg": {
+  "seat": "A",
+  "who": "man",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_A_4.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "black hoodie",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_A_5.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_A_6.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_A_7.jpg": {
+  "seat": "A",
+  "who": "woman",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   20,
+   30,
+   275,
+   340
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_0.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "black hoodie",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.999,
+  "review": "person_other"
+ },
+ "base_0800_B_1.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.998,
+  "review": "sleeping"
+ },
+ "base_0800_B_2.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.965,
+  "review": "person_other"
+ },
+ "base_0800_B_3.jpg": {
+  "seat": "B",
+  "who": "man",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_4.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "black hoodie",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.999,
+  "review": "person_other"
+ },
+ "base_0800_B_5.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.17,
+  "review": "none"
+ },
+ "base_0800_B_6.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_B_7.jpg": {
+  "seat": "B",
+  "who": "woman",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   350,
+   0,
+   600,
+   228
+  ],
+  "clip_person": 0.998,
+  "review": "person_other"
+ },
+ "base_0800_C_0.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "black hoodie",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_1.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 0.992,
+  "review": "artifact"
+ },
+ "base_0800_C_2.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_3.jpg": {
+  "seat": "C",
+  "who": "man",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_4.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "black hoodie",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_C_5.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "artifact"
+ },
+ "base_0800_C_6.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "artifact"
+ },
+ "base_0800_C_7.jpg": {
+  "seat": "C",
+  "who": "woman",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   170,
+   320,
+   470,
+   540
+  ],
+  "clip_person": 1.0,
+  "review": "sleeping"
+ },
+ "base_0800_D_0.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "black hoodie",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.403,
+  "review": "none"
+ },
+ "base_0800_D_1.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.793,
+  "review": "none"
+ },
+ "base_0800_D_2.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.544,
+  "review": "none"
+ },
+ "base_0800_D_3.jpg": {
+  "seat": "D",
+  "who": "man",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.094,
+  "review": "none"
+ },
+ "base_0800_D_4.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "black hoodie",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.999,
+  "review": "sleeping"
+ },
+ "base_0800_D_5.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "padded winter jacket",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.204,
+  "review": "none"
+ },
+ "base_0800_D_6.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "gray sweatshirt and baseball cap",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.106,
+  "review": "none"
+ },
+ "base_0800_D_7.jpg": {
+  "seat": "D",
+  "who": "woman",
+  "outfit": "white t-shirt",
+  "mask_box": [
+   540,
+   180,
+   780,
+   400
+  ],
+  "clip_person": 0.349,
+  "review": "none"
+ }
+}
