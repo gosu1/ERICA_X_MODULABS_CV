@@ -2,7 +2,7 @@
 
 스터디룸에 짐만 두고 30분 넘게 자리를 비운 상태를 카메라로 감지해 문 앞 신호등으로 알린다. 이 폴더의 코드는 1차 회의 보고서(2026-10-15) 기준으로 만들었다.
 
-파일: server.py(판정 본체), capture.py(프레임 수집, server.py가 frames()를 가져다 씀), zone.py(감지 영역 지정 화면과 판정 함수), compare.py(모델 비교), realtime/live.py(실시간 인식 화면, 판정은 하지 않음), synthetic/(Stable Diffusion 인페인팅으로 엎드린 사람 합성). 모델 선택 근거, 실험 수치, 추론 위치 비교 실험 설계, 생성형 데이터 실험 결과는 EXPERIMENTS.md에 있다.
+파일: server.py(판정 본체), capture.py(프레임 수집, server.py가 frames()를 가져다 씀), zone.py(감지 영역 지정 화면과 판정 함수), compare.py(모델 비교), realtime/live.py(실시간 인식 화면, 판정은 하지 않음), synthetic/(Stable Diffusion 인페인팅으로 엎드린 사람 합성), image/(실험 이미지와 설명, 실제 사람은 모자이크). 모델 선택 근거, 실험 수치, 추론 위치 비교 실험 설계, 생성형 데이터 실험 결과는 EXPERIMENTS.md에 있다.
 
 ## 기준 문서
 
