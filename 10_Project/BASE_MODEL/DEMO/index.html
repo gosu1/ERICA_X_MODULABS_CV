@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스터디룸 관제</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css?v=1020b">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="lamp-trio" aria-hidden="true"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+    <div>
+      <div class="eyebrow">한양대 ERICA 융합교육관</div>
+      <h1>스터디룸 관제</h1>
+    </div>
+  </div>
+
+  <div class="clock-block">
+    <div class="clock-label" id="dayLabel">2026-12-07 (월) · 오후 수업 · 가상 운영</div>
+    <div class="clock" id="clock">14:00:00</div>
+  </div>
+
+  <div class="player" role="group" aria-label="재생 제어">
+    <button class="btn icon" id="btnBack" title="1분 뒤로" aria-label="1분 뒤로">⟲ 1분</button>
+    <button class="btn primary" id="btnPlay" aria-label="재생">재생</button>
+    <button class="btn icon" id="btnNext" title="다음 상태 변화로" aria-label="다음 상태 변화로">다음 변화 ⇥</button>
+    <div class="speed" role="radiogroup" aria-label="배속">
+      <button data-speed="1">1×</button>
+      <button data-speed="10">10×</button>
+      <button data-speed="60" class="on">60×</button>
+      <button data-speed="300">300×</button>
+    </div>
+  </div>
+
+  <div class="privacy" title="기획서 개인정보 원칙">
+    <b>개인정보</b> 얼굴 미식별 · 영상 미저장 · 사람 모자이크 · 스냅샷 1일 후 삭제
+  </div>
+
+  <div class="seekbar">
+    <div class="scrub-wrap">
+      <canvas id="scrubBg" aria-hidden="true"></canvas>
+      <input type="range" id="scrub" min="0" max="32399" step="1" value="0" aria-label="시간 이동">
+      <div class="scrub-ticks"><span>14:00</span><span>15:00</span><span>16:00</span><span>17:00 식사</span><span>18:00</span><span>19:00</span><span>20:00</span><span>21:00</span><span>22:00</span><span>23:00</span></div>
+    </div>
+    <div class="jump">
+      <label class="sr" for="jumpTime">이동할 시각</label>
+      <input type="time" id="jumpTime" step="60" min="14:00" max="22:59" value="18:00">
+      <button class="btn" id="jumpGo">이동</button>
+      <span class="quick" id="quick"></span>
+    </div>
+    <div class="sys" role="radiogroup" aria-label="시스템 도입 전후 비교">
+      <button type="button" data-sys="before" class="on" title="지금처럼 아무도 짐을 치우지 않음. 짐만 남은 룸은 주인이 돌아올 때까지 그대로">도입 전 · 아무도 안 치움</button>
+      <button type="button" data-sys="after" title="초록불이 켜지면 기다리던 학생이 짐을 바구니로 옮기고 5분 안에 사용">도입 후 · 초록불 → 짐 치우고 사용</button>
+    </div>
+    <div class="scn">
+      <label class="sr" for="scnMode">시나리오</label>
+      <select id="scnMode">
+        <option value="curated">추천 시나리오</option>
+        <option value="random">무작위 시나리오</option>
+      </select>
+      <button class="btn" id="btnReroll" title="새 무작위 시나리오">새로 만들기</button>
+      <span class="seed mono" id="seedLabel"></span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="ops" class="on">관제</button>
+  <button role="tab" data-tab="lookup">부재 기록 조회</button>
+  <button role="tab" data-tab="stats">통계 · KPI</button>
+  <button role="tab" data-tab="records">데이터 기록</button>
+  <button role="tab" data-tab="board">1층 현황판 미리보기</button>
+  <span class="tab-note" id="scenarioNote"></span>
+</nav>
+
+<main>
+  <!-- 관제 -->
+  <section class="tab-panel" id="tab-ops">
+    <div class="kpis" id="kpis"></div>
+    <div class="ops-grid">
+      <div class="left-col">
+        <div class="floors" id="floors"></div>
+        <div class="card">
+          <div class="block-title"><span>알림</span><span class="hint">초록불 · 입실 · 30분 직전 재방문 · 누르면 그 룸으로 이동</span></div>
+          <ol class="alerts" id="alerts"></ol>
+        </div>
+        <div class="card rules">
+          <div class="block-title"><span>판정 규칙</span><span class="hint">mvp/room_logic.py 와 같은 기준</span></div>
+          <dl>
+            <div><dt>재석</dt><dd>감지 영역 안에 사람이 <b>2초</b> 연속 보이면 사용 중 (오검출 방지)</dd></div>
+            <div><dt>부재</dt><dd>사람이 <b>10초</b> 연속 안 보이면 부재. 부재 시각은 마지막으로 보인 순간 (가림·놓침 방지)</dd></div>
+            <div><dt>초록불</dt><dd>부재가 <b>30분</b> 이어지면 이용 가능 (학교 30분 자리 비움 규칙)</dd></div>
+            <div><dt>감지 영역</dt><dd>가장 큰 테이블 박스를 가로·세로 <b>30%</b> 넓힌 영역. 룸마다 손으로 그리지 않음</dd></div>
+            <div><dt>모델</dt><dd>YOLO26s를 스터디룸 영상으로 파인튜닝 (사람·테이블·엎드린 사람 시험 100%)</dd></div>
+            <div><dt>보관</dt><dd>영상 저장 없음. 상태가 바뀐 순간만 사람 모자이크로 <b>1일</b> 보관 후 삭제, 이후 룸·시각·있음/없음만 남김</dd></div>
+          </dl>
+        </div>
+      </div>
+      <div class="detail" id="detail">
+        <div class="detail-head">
+          <div>
+            <div class="eyebrow" id="dType"></div>
+            <h2 id="dName">-</h2>
+          </div>
+          <div class="state-chip" id="dState">-</div>
+        </div>
+
+        <div class="cam-wrap">
+          <canvas id="cam" width="960" height="540" aria-label="선택한 룸 카메라 화면 (사람 모자이크)"></canvas>
+          <div class="cam-badges">
+            <span class="badge live" id="camSrc">실측 카메라</span>
+            <span class="badge" id="camTime">-</span>
+          </div>
+          <div class="cam-confirm" id="camConfirm" hidden></div>
+        </div>
+        <div class="layers" role="group" aria-label="화면에 겹쳐 보기">
+          <label><input type="checkbox" id="lyZone" checked><span class="sw zone"></span>감지 영역 (테이블 +30%)</label>
+          <label><input type="checkbox" id="lyTable" checked><span class="sw table"></span>테이블</label>
+          <label><input type="checkbox" id="lyPerson" checked><span class="sw person"></span>사람</label>
+          <label><input type="checkbox" id="lyItems"><span class="sw items"></span>짐</label>
+        </div>
+
+        <div class="judge">
+          <div class="judge-row">
+            <div class="judge-cell">
+              <div class="k">감지 영역 안 사람</div>
+              <div class="v" id="jIn">-</div>
+            </div>
+            <div class="judge-cell">
+              <div class="k">감지된 짐</div>
+              <div class="v" id="jItems">-</div>
+            </div>
+            <div class="judge-cell">
+              <div class="k">비운 시간</div>
+              <div class="v mono" id="jAway">-</div>
+            </div>
+            <div class="judge-cell">
+              <div class="k">초록불까지</div>
+              <div class="v mono" id="jLeft">-</div>
+            </div>
+          </div>
+          <div class="limit-bar" aria-hidden="true"><i id="limitFill"></i><span class="tick" style="left:100%"></span></div>
+          <p class="judge-text" id="jText">-</p>
+        </div>
+
+        <div class="timeline-block">
+          <div class="block-title">
+            <span>오늘 저녁 상태 기록</span>
+            <span class="hint">막대를 누르면 그 시각으로 이동</span>
+          </div>
+          <canvas id="timeline" height="56" aria-label="선택한 룸의 시간대별 상태"></canvas>
+          <div class="axis" id="tlAxis"></div>
+        </div>
+
+        <div class="events-block">
+          <div class="block-title">
+            <span>상태 변화 스냅샷</span>
+            <span class="hint">상태가 바뀐 순간만 모자이크로 저장 · 1일 후 자동 삭제</span>
+          </div>
+          <ol class="events" id="events"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 부재 기록 조회 -->
+  <section class="tab-panel" id="tab-lookup" hidden>
+    <div class="lookup">
+      <div class="lookup-form">
+        <h2>부재 기록 조회</h2>
+        <p class="lead">짐 주인과 사용자 사이에 다툼이 생기면, 룸이 몇 시부터 비어 있었는지 기록으로 확인합니다. (기획서 FAQ Q11)</p>
+        <label class="field">룸
+          <select id="lkRoom"></select>
+        </label>
+        <label class="field">조회 시각
+          <input type="time" id="lkTime" step="1" value="20:30:00" min="14:00:00" max="22:59:59">
+        </label>
+        <div class="field-row">
+          <button class="btn" id="lkNow">현재 재생 시각으로</button>
+          <button class="btn primary" id="lkGo">조회</button>
+        </div>
+      </div>
+      <div class="lookup-result" id="lkResult"></div>
+    </div>
+  </section>
+
+  <!-- 통계 -->
+  <section class="tab-panel" id="tab-stats" hidden>
+    <div class="stats-head">
+      <h2>통계 · KPI</h2>
+      <p class="lead">재생한 시각까지의 기록으로 계산합니다. 활성화율은 기획서 정의대로 10분마다 "사람이 실제로 있는 룸 수 ÷ 14"를 기록한 값이고, Primary KPI는 저녁 7~10시 평균입니다.</p>
+    </div>
+    <div class="kpi-big" id="kpiBig"></div>
+    <div class="stats-grid">
+      <div class="card wide compare-card">
+        <div class="block-title"><span>도입 전 → 도입 후 (같은 날 비교)</span><span class="hint">위쪽 스위치와 상관없이 두 모드를 함께 계산</span></div>
+        <div id="compare"></div>
+      </div>
+      <div class="card wide">
+        <div class="block-title"><span>시간대별 이용</span><span class="hint">오후·저녁 식사 때는 짐만 남은 룸이 많고, 저녁 8시 이후에는 9할 넘게 찬다</span></div>
+        <div id="bands"></div>
+      </div>
+      <div class="card">
+        <div class="block-title"><span>10분 단위 룸 활성화율</span><span class="hint">파란 띠 = KPI 구간(19~22시) · 목표 80%</span></div>
+        <svg id="actChart" viewBox="0 0 720 260" role="img" aria-label="10분 단위 룸 활성화율"></svg>
+      </div>
+      <div class="card">
+        <div class="block-title"><span>룸별 상태 비율</span><span class="hint">14:00부터 재생 시각까지</span></div>
+        <div id="shareBars" class="share-bars"></div>
+      </div>
+      <div class="card">
+        <div class="block-title"><span>30분 직전 재방문 (얌체 이용 의심)</span><span class="hint">25분 넘게 비웠다가 잠깐 들른 뒤 10분 안에 다시 나감</span></div>
+        <div id="sneaky"></div>
+      </div>
+      <div class="card">
+        <div class="block-title"><span>초록불 이후 실제 이용까지 걸린 시간</span><span class="hint">짐만 남은 룸이 다른 학생에게 돌아간 속도</span></div>
+        <div id="handover"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 데이터 기록 -->
+  <section class="tab-panel" id="tab-records" hidden>
+    <div class="records-head">
+      <div>
+        <h2>데이터 기록</h2>
+        <p class="lead">스냅샷이 지워진 뒤에도 남는 것은 "룸 번호, 시각, 사람 있음/없음" 데이터뿐입니다. 아래는 1분 단위 기록입니다.</p>
+      </div>
+      <div class="field-row">
+        <select id="recRoom"></select>
+        <button class="btn primary" id="recCsv">CSV 내보내기</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="records">
+        <thead><tr><th>룸</th><th>시각</th><th>사람</th><th>상태</th><th>비운 시간</th></tr></thead>
+        <tbody id="recBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 현황판 -->
+  <section class="tab-panel" id="tab-board" hidden>
+    <div class="board" id="board"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head"><h3 id="modalTitle"></h3><button class="btn icon" id="modalClose" aria-label="닫기">닫기</button></div>
+    <canvas id="modalCanvas" width="960" height="540"></canvas>
+    <p class="modal-note" id="modalNote"></p>
+  </div>
+</div>
+
+<script src="data/detections.js"></script>
+<script src="app.js?v=1020c"></script>
+</body>
+</html>
