@@ -14,6 +14,7 @@
 구조가 같아 속도는 같다. 천장 카메라 영상은 v2로 시작한다. 실행 중 t 키로 두 모델을 바로 바꿔 비교할 수 있다.
 왼쪽 아래에 화면 fps, 판정 시간, 이 컴퓨터로 1초 간격 판정이 가능한 룸 수를 보여 준다.
 키: q 종료 · m 사람 모자이크 켜기/끄기 · t 판정 모델 바꾸기 (기본 YOLO26s ↔ 파인튜닝 v2)
+시작하면 초록불 시간을 시:분:초로 묻는다 (1분 30초 → 00:01:30 또는 000130, 그냥 Enter → 00:30:00).
 """
 
 from __future__ import annotations
@@ -28,9 +29,9 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
-from 알박기_실행 import DEFAULT_WEIGHTS, HERE, LatestFrame, SharedModelDetector, first_existing
+from 알박기_실행 import DEFAULT_WEIGHTS, HERE, LatestFrame, SharedModelDetector, ask_limit, first_existing
 from room_logic import RoomTracker, Rules
-from run_sam import draw, font
+from run_sam import draw, font, rule_text
 
 
 class Judge(threading.Thread):
@@ -97,13 +98,13 @@ def main():
     ap.add_argument("--interval", type=float, default=1.0, help="판정 간격(초)")
     ap.add_argument("--overlap", type=float, default=0.10)
     ap.add_argument("--grow", type=float, default=0.15)
-    ap.add_argument("--limit-min", type=float, default=30)
-    ap.add_argument("--time-scale", type=float, default=60.0, help="시연 배속. 60이면 30분 규칙이 30초")
+    ap.add_argument("--limit", help="초록불로 바꾸는 자리 비움 시간 (00:01:30 또는 000130). 안 주면 시작할 때 물어봄")
     ap.add_argument("--privacy", action="store_true", help="처음부터 사람 모자이크 켜기 (m 키로도 전환)")
     ap.add_argument("--duration", type=float, default=0, help="이만큼(초) 보고 닫음. 0이면 q를 누를 때까지")
     ap.add_argument("--shot", help="닫을 때 마지막 화면을 이 파일로 저장")
     ap.add_argument("--switch-every", type=float, default=0, help="시연용: 이만큼(초)마다 판정 모델을 자동으로 바꿈")
     a = ap.parse_args()
+    a.limit_sec = ask_limit(a.limit)
     base = str(first_existing([HERE / "yolo26s.pt", HERE.parent / "yolo26s.pt", Path("yolo26s.pt")]))  # 없으면 자동으로 받음
     models = {"기본 YOLO26s": base}
     if Path(DEFAULT_WEIGHTS).exists():
@@ -131,7 +132,7 @@ def main():
     det = SharedModelDetector(models[names[0]], a.sam, overlap=a.overlap, grow=a.grow, device=device, move_sec=30.0)
     det.yolo, det.sam, det.model_name = yolos[names[0]], SAM(a.sam), names[0]
     det.sam(blank, bboxes=[[100.0, 100.0, 400.0, 300.0]], device=device, verbose=False)
-    tracker = RoomTracker("내 카메라", Rules(limit_sec=a.limit_min * 60 / a.time_scale), start=0.0)
+    tracker = RoomTracker("내 카메라", Rules(limit_sec=a.limit_sec), start=0.0)
 
     cam = LatestFrame(a.source, loop=True)
     cam.start()
@@ -162,7 +163,7 @@ def main():
                 vis = perf_panel(frame, ["성능 확인 · 판정 준비 중", f"화면 {fps:.0f} fps", f"장치: {dev_name}"], fs)
             else:
                 now = time.monotonic() - judge.t0
-                vis = draw(frame, det, r["persons"], r["inside"], tracker, now, a.time_scale, privacy=privacy)
+                vis = draw(frame, det, r["persons"], r["inside"], tracker, now, 1, privacy=privacy)
                 med = statistics.median(judge.times[r["model"]][-30:])
                 lines = [
                     f"성능 확인 · 판정 {a.interval:g}초마다 + 화면 실시간",
@@ -173,8 +174,7 @@ def main():
                     f"이 컴퓨터로 {a.interval:g}초 간격 판정 가능한 룸: 약 {int(a.interval * 1000 // max(med, 1))}개",
                     f"모자이크 {'켜짐' if privacy else '꺼짐'} (m) · 모델 바꾸기 (t) · 종료 (q)",
                 ]
-                if a.time_scale != 1:
-                    lines.insert(5, f"시연 배속 ×{a.time_scale:g}: 30분 규칙 → {a.limit_min * 60 / a.time_scale:g}초")
+                lines.insert(5, f"초록불 규칙: 자리 비움 {rule_text(a.limit_sec)}" + ("" if a.limit_sec == 1800 else " (시험용)"))
                 vis = perf_panel(vis, lines, fs)
             cv2.imshow(win, vis)
             key = cv2.waitKey(1) & 0xFF

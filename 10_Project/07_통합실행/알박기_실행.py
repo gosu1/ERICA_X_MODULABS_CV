@@ -4,13 +4,16 @@
     python 알박기_실행.py --rooms rooms.json
 
     # 영상 하나를 룸 14개처럼 복제해 동시 처리 속도 시험 (병렬 테스트)
-    python 알박기_실행.py --demo-video 1차.mp4 --demo-rooms 14 --duration 120 --time-scale 60
+    python 알박기_실행.py --demo-video 1차.mp4 --demo-rooms 14 --duration 120
+
+시작하면 초록불로 바꿀 자리 비움 시간을 시:분:초로 묻는다. 시험할 때 짧게 줄여 쓴다.
+    1분 30초 → 00:01:30 또는 000130 · 그냥 Enter → 00:30:00 (학교 규칙) · --limit 00:01:30 으로 주면 묻지 않음
 
 한 번 실행하면 아래가 모두 돌아간다.
   1. 룸마다 카메라(또는 영상)에서 가장 최근 화면만 받아 둔다 (밀린 화면은 버림).
   2. --interval 초마다 모든 룸을 차례로 판정한다.
      YOLO26s v2로 사람·테이블·짐 검출 → SAM 테이블 테두리 +15% 감지 범위 → 사람 박스 10% 이상 겹치면 재석
-     → 2초 연속 보이면 사용중, 10초 안 보이면 부재, 30분이면 초록, 사람도 짐도 없으면 바로 초록
+     → 2초 연속 보이면 사용중, 10초 안 보이면 부재, 입력한 시간(기본 30분)이면 초록, 사람도 짐도 없으면 바로 초록
   3. 색이 바뀌면 신호등 주소로 보내고, CSV 기록과 사람 모자이크 스냅샷(1일 보관)을 남긴다.
   4. http://localhost:8800 에서 MVP 관제 대시보드와 같은 모양의 현황 화면(현황/ 폴더)을 본다.
      룸 지도·KPI·알림·상태 기록·스냅샷은 1초마다, 선택한 룸의 카메라 화면은 실시간(모자이크)으로 갱신된다.
@@ -28,6 +31,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import webbrowser
 from dataclasses import dataclass, field
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -47,7 +51,7 @@ def first_existing(paths):
 SAM_DIR = first_existing([HERE / "sam_zone.py", HERE.parent / "05_BASE_MODEL" / "DEMO" / "SAM감지범위" / "sam_zone.py"]).parent
 sys.path.insert(0, str(SAM_DIR))
 from room_logic import RoomState, RoomTracker, Rules  # noqa: E402
-from run_sam import blur, draw  # noqa: E402
+from run_sam import blur, draw, rule_text  # noqa: E402
 from sam_zone import ITEMS, SamZoneDetector  # noqa: E402
 
 WEB_DIR = HERE / "현황"                       # 현황 화면 (MVP 관제 대시보드 디자인)
@@ -60,6 +64,48 @@ DEFAULT_WEIGHTS = first_existing([
     HERE.parent / "03_모델비교·파인튜닝" / "파인튜닝" / "모델" / "알박기_yolo26s_v2.pt",
     HERE.parent / "알박기_yolo26s_v2.pt",
 ])
+
+
+def parse_hms(text):
+    """'00:01:30' 또는 '000130' → 90초. 형식이 틀리면 ValueError."""
+    t = text.strip()
+    if len(t) == 6 and t.isdigit():
+        t = f"{t[:2]}:{t[2:4]}:{t[4:]}"
+    h, m, s = (int(x) for x in t.split(":"))
+    if len(t.split(":")[0]) < 2 or h < 0 or not (0 <= m < 60 and 0 <= s < 60):
+        raise ValueError(text)
+    return h * 3600 + m * 60 + s
+
+
+def ask_limit(given, off_sec=10.0):
+    """초록불로 바꿀 자리 비움 시간을 시:분:초로 받는다. --limit 로 주면 묻지 않는다."""
+    if given:
+        try:
+            sec = parse_hms(given)
+        except ValueError:
+            raise SystemExit(f"--limit 형식이 틀렸습니다: {given} · 예) 1분 30초 → 00:01:30 또는 000130")
+    elif not sys.stdin.isatty():                       # 입력을 받을 수 없는 실행이면 학교 규칙대로
+        sec = 30 * 60
+    else:
+        print("초록불로 바꿀 자리 비움 시간을 입력하세요. 형식은 시:분:초(00:00:00)입니다.")
+        print("  예) 1분 30초 → 00:01:30 또는 000130 · 10초 → 00:00:10 · 그냥 Enter → 00:30:00 (학교 규칙)")
+        while True:
+            text = input("초록불 시간: ").strip()
+            if not text:
+                sec = 30 * 60
+                break
+            try:
+                sec = parse_hms(text)
+            except ValueError:
+                print("  형식이 틀렸습니다. 00:01:30 또는 000130처럼 입력해 주세요.")
+                continue
+            if sec > 0:
+                break
+            print("  0초보다 길게 입력해 주세요.")
+    if sec <= off_sec:
+        print(f"  참고: {off_sec:g}초 이하로 하면 부재 확인({off_sec:g}초)이 끝나는 순간 이미 시간이 지나, 노랑 없이 빨강 → 초록으로 바로 바뀝니다.")
+    print(f"초록불 규칙: 자리 비움 {rule_text(sec)}" + ("" if sec == 30 * 60 else " (시험용, 학교 규칙은 30분)"))
+    return sec
 
 
 # ---------------------------------------------------------------- 카메라
@@ -261,7 +307,7 @@ class App:
         blank = np.zeros((540, 960, 3), np.uint8)                 # 첫 판정이 늦지 않게 미리 한 번씩 돌려 둔다
         yolo.predict(blank, imgsz=960, device=self.device, verbose=False)
         sam(blank, bboxes=[[100.0, 100.0, 400.0, 300.0]], device=self.device, verbose=False)
-        rules = Rules(limit_sec=a.limit_min * 60 / a.time_scale)
+        rules = Rules(limit_sec=a.limit_sec)
         self.rooms: list[Room] = []
         for i, rc in enumerate(load_rooms(a)):
             det = SharedModelDetector(str(a.weights), a.sam, overlap=a.overlap, grow=a.grow, device=self.device,
@@ -302,8 +348,8 @@ class App:
                 "id": r.id, "no": r.no, "group": r.group, "kind": r.kind, "code": code,
                 "inside": len(v.get("inside", [])), "persons": len(v.get("persons", [])),
                 "items": len(items), "item_names": sorted({ITEMS[c] for _, _, c in items}),
-                "empty": bool(tr.empty), "away": away * a.time_scale, "limit": a.limit_min * 60,
-                "left": max(0.0, tr.rules.limit_sec - away) * a.time_scale,
+                "empty": bool(tr.empty), "away": away, "limit": a.limit_sec,
+                "left": max(0.0, tr.rules.limit_sec - away),
                 "away_wall": self.wall(tr.away_since), "green_wall": self.wall(tr.away_since + tr.rules.limit_sec),
                 "since": r.since_wall, "pend": round(pend, 1),
                 "judged_ago": round(now - v["now"], 1) if judged else 0, "events": r.events[:20], "runs": r.runs,
@@ -311,7 +357,7 @@ class App:
         recent = self.cycles[-10:]
         rules = self.rooms[0].tracker.rules if self.rooms else Rules()
         return {"rooms": rooms, "clock": datetime.now().strftime("%H:%M:%S"), "date": datetime.now().strftime("%Y-%m-%d"),
-                "started": self.wall(0), "elapsed": now, "time_scale": a.time_scale, "device": self.device_name,
+                "started": self.wall(0), "elapsed": now, "limit_sec": a.limit_sec, "limit_text": rule_text(a.limit_sec), "device": self.device_name,
                 "cycle_ms": round(statistics.median(recent)) if recent else 0, "interval_ms": int(a.interval * 1000),
                 "rules": {"on": rules.on_sec, "off": rules.off_sec, "empty": rules.empty_sec}}
 
@@ -351,7 +397,7 @@ class App:
             v = dict(r.view)
         if "frame" not in v:
             return None
-        vis = draw(v["frame"], r.det, v["persons"], v["inside"], r.tracker, v["now"], self.a.time_scale, privacy=True)
+        vis = draw(v["frame"], r.det, v["persons"], v["inside"], r.tracker, v["now"], 1, privacy=True)
         vis = cv2.resize(vis, (640, int(640 * vis.shape[0] / vis.shape[1])))
         return cv2.imencode(".jpg", vis, [cv2.IMWRITE_JPEG_QUALITY, 75])[1].tobytes()
 
@@ -365,6 +411,8 @@ class App:
             server = ThreadingHTTPServer(("0.0.0.0", a.port), make_handler(self))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             print(f"실시간 현황 화면: http://localhost:{a.port}")
+            if a.open:
+                webbrowser.open(f"http://localhost:{a.port}")
         log_f = open(self.out / "판정기록.csv", "w", newline="", encoding="utf-8-sig")
         log = csv.writer(log_f)
         log.writerow(["시각", "룸", "상태", "신호등", "범위 안 사람", "범위 안 짐", "빈 책상", "비운 시간(초)", "한 바퀴(ms)"])
@@ -397,7 +445,7 @@ class App:
                         send_signal(r.signal_url, r.id, color)
                         snap = None
                         if not a.no_snapshot:
-                            vis = draw(frame, r.det, persons, inside, r.tracker, now, a.time_scale, privacy=True)
+                            vis = draw(frame, r.det, persons, inside, r.tracker, now, 1, privacy=True)
                             snap = f"{datetime.now():%Y%m%d-%H%M%S}_{r.id}_{state.value}.jpg"
                             save_snapshot(vis, self.out / "스냅샷", snap)
                         first = r.id not in self.announced
@@ -439,7 +487,7 @@ class App:
             return f"마지막으로 보인 {self.wall(tr.away_since)}부터 부재 ({tr.rules.off_sec:g}초 확인 후 판정)"
         if tr.empty:
             return f"사람도 짐도 {tr.rules.empty_sec:g}초 연속 없어 빈 책상으로 판정 (바로 초록)"
-        return f"{self.wall(tr.away_since)}부터 30분 경과" + (f" (시연 배속 ×{self.a.time_scale:g})" if self.a.time_scale != 1 else "")
+        return f"{self.wall(tr.away_since)}부터 {rule_text(tr.rules.limit_sec)} 경과"
 
     def detail(self, r: Room, now, inside):
         tr = r.tracker
@@ -448,9 +496,8 @@ class App:
         if tr.empty:
             return "빈 책상 · 바로 사용 가능"
         if tr.state is RoomState.AWAY:
-            left = tr.left_sec(now) * self.a.time_scale
-            return f"짐 {len(r.det.items_inside)}개 · 초록까지 {int(left // 60)}분 {int(left % 60)}초"
-        return "30분 넘게 비어 있음 · 짐은 바구니로"
+            return f"짐 {len(r.det.items_inside)}개 · 초록까지 {rule_text(tr.left_sec(now))}"
+        return f"{rule_text(tr.rules.limit_sec)} 넘게 비어 있음 · 짐은 바구니로"
 
     def report(self):
         if not self.cycles:
@@ -497,8 +544,7 @@ def main():
     ap.add_argument("--interval", type=float, default=1.0, help="모든 룸을 한 번씩 판정하는 간격(초)")
     ap.add_argument("--overlap", type=float, default=0.10, help="사람 박스 중 감지 범위와 겹쳐야 하는 비율")
     ap.add_argument("--grow", type=float, default=0.15, help="테이블 짧은 변의 몇 배만큼 부풀릴지")
-    ap.add_argument("--limit-min", type=float, default=30, help="초록불로 바꾸는 자리 비움 시간(분)")
-    ap.add_argument("--time-scale", type=float, default=1.0, help="시연용으로 30분을 줄이는 배수 (60이면 30초)")
+    ap.add_argument("--limit", help="초록불로 바꾸는 자리 비움 시간 (00:01:30 또는 000130). 안 주면 시작할 때 물어봄")
     ap.add_argument("--signal-url", help="신호등 색을 POST로 보낼 주소 (룸별 signal_url이 없을 때)")
     ap.add_argument("--duration", type=float, default=0, help="이만큼(초) 돌고 끝냄. 0이면 계속")
     ap.add_argument("--no-loop", action="store_true", help="영상 파일이 끝나면 다시 처음부터 돌리지 않음")
@@ -506,6 +552,7 @@ def main():
     ap.add_argument("--port", type=int, default=8800)
     ap.add_argument("--no-web", action="store_true", help="실시간 현황 화면을 띄우지 않음")
     ap.add_argument("--no-snapshot", action="store_true")
+    ap.add_argument("--open", action="store_true", help="현황 화면이 준비되면 브라우저로 열기")
     a = ap.parse_args()
     if not Path(a.weights).exists():
         raise SystemExit(f"모델 파일을 찾을 수 없습니다: {a.weights} · --weights 로 알박기_yolo26s_v2.pt 위치를 알려 주세요.")
@@ -513,6 +560,7 @@ def main():
         raise SystemExit(f"룸 설정 파일이 없습니다: {a.rooms} · rooms.example.json을 복사해 rooms.json을 만들고 카메라 주소를 적어 주세요.")
     if a.demo_video and not Path(a.demo_video).exists():
         raise SystemExit(f"영상 파일이 없습니다: {a.demo_video}")
+    a.limit_sec = ask_limit(a.limit)
     App(a).run()
 
 

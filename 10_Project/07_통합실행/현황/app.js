@@ -10,6 +10,9 @@
   const S = { sel: null, rooms: [], tiles: new Map(), prev: new Map(), roomKey: "", eventsKey: "", alertKey: "", data: null };
 
   const pad = (n) => String(n).padStart(2, "0");
+  // 받침 있으면 a, 없으면 b (30분이 / 1분 30초가)
+  const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? a : b; };
+  const limitTxt = (d) => d.limit_text;
   function timer(sec) {
     sec = Math.max(0, Math.round(sec));
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
@@ -116,11 +119,11 @@
     const ok = d.cycle_ms && d.cycle_ms < d.interval_ms;
     $("kpis").innerHTML = `
       <div class="kpi st" style="--c:var(--red)"><span class="k">🔴 사용 중</span><span class="v">${red}<small> / ${n}</small></span><span class="s">감지 범위 안에 사람 있음</span></div>
-      <div class="kpi st" style="--c:var(--yellow)"><span class="k">🟡 자리 비움</span><span class="v">${yel}</span><span class="s">30분 미만 · 짐에 손대지 않음</span></div>
-      <div class="kpi st" style="--c:var(--green)"><span class="k">🟢 이용 가능</span><span class="v">${grnEmpty + stale}</span><span class="s">빈 책상 ${grnEmpty} · 30분 넘은 짐 ${stale}</span></div>
+      <div class="kpi st" style="--c:var(--yellow)"><span class="k">🟡 자리 비움</span><span class="v">${yel}</span><span class="s">${limitTxt(d)} 미만 · 짐에 손대지 않음</span></div>
+      <div class="kpi st" style="--c:var(--green)"><span class="k">🟢 이용 가능</span><span class="v">${grnEmpty + stale}</span><span class="s">빈 책상 ${grnEmpty} · ${limitTxt(d)} 넘은 짐 ${stale}</span></div>
       <div class="kpi"><span class="k">지금 룸 활성화율</span><span class="v">${act}<small>%</small></span>
         <div class="meter"><i style="width:${act}%"></i><b style="left:80%"></b></div><span class="s">사람이 실제로 있는 룸 ÷ ${n} · 목표 80%</span></div>
-      <div class="kpi ${stale ? "bad" : "good"}"><span class="k">30분 넘게 짐만 있는 룸</span><span class="v">${stale}</span><span class="s">목표 0 · 초록불로 안내 중</span></div>
+      <div class="kpi ${stale ? "bad" : "good"}"><span class="k">${limitTxt(d)} 넘게 짐만 있는 룸</span><span class="v">${stale}</span><span class="s">목표 0 · 초록불로 안내 중</span></div>
       <div class="kpi ${ok ? "good" : "bad"}"><span class="k">한 바퀴 판정 시간</span><span class="v">${d.cycle_ms}<small>ms</small></span><span class="s">룸 ${n}개 · ${d.interval_ms}ms 안에 ${ok ? "끝남" : "못 끝냄"}</span></div>`;
   }
 
@@ -150,10 +153,10 @@
       : r.code === 0
       ? `감지 범위 안에 사람 ${r.inside}명이 있어 <b>사용 중</b>입니다. ${r.since}부터 계속 사람이 있었습니다. 문 앞 표시등은 빨강입니다.`
       : r.code === 1
-      ? `<b>${r.away_wall}</b>에 마지막으로 사람이 보였습니다. ${itemsTxt} ${limitTxt(d)}이 되는 <b>${r.green_wall}</b>에 초록불로 바뀝니다. 그전까지는 짐에 손대지 않습니다.`
+      ? `<b>${r.away_wall}</b>에 마지막으로 사람이 보였습니다. ${itemsTxt} ${limitTxt(d)}${josa(limitTxt(d), "이", "가")} 되는 <b>${r.green_wall}</b>에 초록불로 바뀝니다. 그전까지는 짐에 손대지 않습니다.`
       : r.empty
-      ? `사람도 짐도 ${d.rules.empty}초 넘게 보이지 않아 <b>빈 책상</b>으로 판정했습니다. 30분을 기다리지 않고 바로 초록불입니다.`
-      : `<b>${r.away_wall}</b>부터 ${limitTxt(d)} 넘게 사람이 없습니다. ${itemsTxt} 학교 30분 규칙에 따라 <b>짐을 룸 앞 회색 바구니로 옮기고 사용할 수 있습니다.</b>`;
+      ? `사람도 짐도 ${d.rules.empty}초 넘게 보이지 않아 <b>빈 책상</b>으로 판정했습니다. ${limitTxt(d)}${josa(limitTxt(d), "을", "를")} 기다리지 않고 바로 초록불입니다.`
+      : `<b>${r.away_wall}</b>부터 ${limitTxt(d)} 넘게 사람이 없습니다. ${itemsTxt} ${d.limit_sec === 1800 ? "학교 30분 규칙" : "초록불 규칙"}에 따라 <b>짐을 룸 앞 회색 바구니로 옮기고 사용할 수 있습니다.</b>`;
     const box = $("camConfirm");
     if (r.code === 0 && p > 0) {
       box.hidden = false;
@@ -205,7 +208,6 @@
   }
 
   // ---------- 알림 ----------
-  const limitTxt = (d) => d.time_scale !== 1 ? `30분(시연 ${Math.round(1800 / d.time_scale)}초)` : "30분";
   function renderAlerts(d) {
     const items = [];
     d.rooms.forEach((r) => r.events.forEach((e) => {
@@ -232,7 +234,8 @@
     $("clock").textContent = d.clock;
     $("dayLabel").textContent = `${d.date} · 실시간 판정 · ${d.started}부터`;
     $("perf").innerHTML = `<span class="badge live">룸 ${d.rooms.length}개 판정 중</span><span class="badge">한 바퀴 ${d.cycle_ms}ms / ${d.interval_ms}ms</span><span class="badge">${d.device}</span>`;
-    $("tabNote").textContent = d.time_scale !== 1 ? `시연 배속 ×${d.time_scale} · 30분 규칙이 ${Math.round(1800 / d.time_scale)}초로 줄어 있음` : "";
+    $("tabNote").textContent = d.limit_sec !== 1800 ? `시험 설정 · 초록불 규칙 ${d.limit_text} (학교 규칙은 30분)` : "";
+    $("ruleLimit").textContent = d.limit_text;
     renderTiles(d);
     renderKpis(d);
     renderDetail(d);

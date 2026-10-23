@@ -33,6 +33,12 @@ RGB = {"red": (230, 57, 70), "yellow": (250, 190, 40), "green": (46, 196, 102), 
 FONT = next((p for p in ["C:/Windows/Fonts/malgunbd.ttf", "C:/Windows/Fonts/malgun.ttf"] if Path(p).exists()), None)
 
 
+def rule_text(sec):
+    """초 → '30분', '1분 30초' 같은 한국어 시간."""
+    sec = int(round(sec)); h, r = divmod(sec, 3600); m, s = divmod(r, 60)
+    return " ".join(f"{v}{u}" for v, u in ((h, "시간"), (m, "분"), (s, "초")) if v) or "0초"
+
+
 def font(size):
     return ImageFont.truetype(FONT, size) if FONT else ImageFont.load_default()
 
@@ -91,7 +97,7 @@ def draw(frame, det, persons, inside, tr: RoomTracker, now, scale, privacy=True)
     elif tr.empty:
         lines.append((f"빈 책상 (사람도 짐도 없음) · 바로 사용 가능", font(int(fs * .7)), (255, 255, 255)))
     else:
-        lines.append((f"30분 이상 비어 있음 · 짐은 바구니로 옮기고 사용", font(int(fs * .7)), (255, 255, 255)))
+        lines.append((f"{rule_text(tr.rules.limit_sec * scale)} 이상 비어 있음 · 짐은 바구니로 옮기고 사용", font(int(fs * .7)), (255, 255, 255)))
     if det.items_inside:
         names = ", ".join(sorted({ITEMS[c] for _, _, c in det.items_inside}))
         lines.append((f"감지 범위 안 짐: {names}", font(int(fs * .7)), (255, 255, 255)))
