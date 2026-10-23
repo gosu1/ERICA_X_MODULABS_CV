@@ -7,6 +7,7 @@
   흰 선      SAM이 딴 테이블 테두리
   색 영역    부풀린 감지 범위 (신호등 색: 빨강 사용중 / 노랑 자리비움 / 초록 이용가능)
   흰 박스    감지 범위 안의 사람 (재석으로 셈), 회색 박스는 범위 밖 사람 (무시)
+  하늘색 박스 감지 범위 안의 짐 (사람도 짐도 없으면 빈 책상 → 바로 초록)
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "mvp"))
 from room_logic import RoomState, RoomTracker, Rules  # noqa: E402
-from sam_zone import SamZoneDetector  # noqa: E402
+from sam_zone import ITEMS, SamZoneDetector  # noqa: E402
 
 RGB = {"red": (230, 57, 70), "yellow": (250, 190, 40), "green": (46, 196, 102), "off": (70, 70, 70)}
 FONT = next((p for p in ["C:/Windows/Fonts/malgunbd.ttf", "C:/Windows/Fonts/malgun.ttf"] if Path(p).exists()), None)
@@ -70,6 +71,8 @@ def draw(frame, det, persons, inside, tr: RoomTracker, now, scale, privacy=True)
         c = (255, 255, 255) if tuple(b) in ins else (140, 140, 140)
         cv2.rectangle(out, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), c, 2)
         cv2.putText(out, f"{s:.2f}", (int(b[0]) + 3, int(b[1]) + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.55, c, 2)
+    for b, s, _ in det.items_inside:
+        cv2.rectangle(out, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (235, 200, 80), 2)
 
     h, w = out.shape[:2]; fs = max(16, w // 50)
     img = Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB)); dr = ImageDraw.Draw(img)
@@ -85,8 +88,13 @@ def draw(frame, det, persons, inside, tr: RoomTracker, now, scale, privacy=True)
         lines.append((f"자리 비움 {fmt(tr.away_sec(now) * scale)} · 초록불까지 {fmt(tr.left_sec(now) * scale)}", font(int(fs * .7)), (255, 255, 255)))
     elif tr.state is RoomState.OCCUPIED:
         lines.append((f"감지 범위 안 사람 {len(inside)}명 (범위 밖 {len(persons) - len(inside)}명은 무시)", font(int(fs * .7)), (255, 255, 255)))
+    elif tr.empty:
+        lines.append((f"빈 책상 (사람도 짐도 없음) · 바로 사용 가능", font(int(fs * .7)), (255, 255, 255)))
     else:
         lines.append((f"30분 이상 비어 있음 · 짐은 바구니로 옮기고 사용", font(int(fs * .7)), (255, 255, 255)))
+    if det.items_inside:
+        names = ", ".join(sorted({ITEMS[c] for _, _, c in det.items_inside}))
+        lines.append((f"감지 범위 안 짐: {names}", font(int(fs * .7)), (255, 255, 255)))
     y = 12
     for t, f, c in lines:
         tb = dr.textbbox((14, y), t, font=f); dr.rectangle((tb[0] - 6, tb[1] - 4, tb[2] + 6, tb[3] + 4), fill=(0, 0, 0))
@@ -136,11 +144,12 @@ def main():
             if a.duration and now > a.duration:
                 break
             persons, inside, _ = det.detect(frame, now)
-            prev = tr.state; state = tr.update(bool(inside), now)
+            prev = tr.state; state = tr.update(bool(inside), now, items=bool(det.items_inside))
             vis = draw(frame, det, persons, inside, tr, now, a.time_scale, privacy=not a.no_privacy)
             if state is not prev or idx == 0:
                 stamp = (wall0 + timedelta(seconds=now * a.time_scale)).strftime("%H:%M:%S")
-                print(f"[{stamp}] {a.room}: {prev.value} → {state.value} (범위 안 {len(inside)}명, 범위 갱신 {det.updates}회)")
+                print(f"[{stamp}] {a.room}: {prev.value} → {state.value} (범위 안 {len(inside)}명, 짐 {len(det.items_inside)}개"
+                      f"{', 빈 책상' if tr.empty else ''}, 범위 갱신 {det.updates}회)")
                 if snap:
                     cv2.imencode(".jpg", vis)[1].tofile(str(snap / f"{idx:06d}_{state.value}.jpg"))
             if writer:

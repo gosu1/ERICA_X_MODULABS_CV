@@ -4,7 +4,7 @@ __pycache__/
 *.mp4
 frames/
 snapshots/
-synthetic/out*/*.jpg
+03_데이터·실험/synthetic/out*/*.jpg
 *.avi
 *.tar
 *.mat

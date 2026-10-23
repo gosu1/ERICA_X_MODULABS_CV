@@ -17,7 +17,7 @@
   const INIT_QS = new URLSearchParams(location.search);   // 시나리오를 고르면 주소가 바뀌므로 처음 주소를 따로 둔다
   const START = 14 * 3600;          // 14:00
   const N = 9 * 3600;               // 14:00:00 ~ 22:59:59
-  const RULE = { on: 2, off: 10, limit: 30 * 60 };
+  const RULE = { on: 2, off: 10, limit: 30 * 60, empty: 10 };   // empty: 사람도 짐도 이만큼 연속으로 없으면 빈 책상 → 바로 초록
   const KEEP = 24 * 3600;           // 스냅샷 보관 1일
   const ST = ["사용 중", "자리 비움", "이용 가능"];
   const ST_LONG = ["🔴 사용 중", "🟡 자리 비움", "🟢 이용 가능"];
@@ -77,8 +77,9 @@
     const awayS = new Int32Array(N);
     const occS = new Int32Array(N);
     const pend = new Int8Array(N);   // >0: 부재 확인 중 경과 초, <0: 재석 확인 중 경과 초
+    const empty = new Uint8Array(N);  // 1: 사람도 짐도 없는 빈 책상
     const events = [];
-    let present, lastSeen, awaySince, occSince, runStart = null, prev = -1;
+    let present, lastSeen, awaySince, occSince, runStart = null, prev = -1, noItemsSince = null;
     if (room.initAway != null) { present = false; lastSeen = null; awaySince = -room.initAway; occSince = 0; }
     else { present = true; lastSeen = 0; awaySince = 0; occSince = -((room.initOcc ?? 40) * M); }
 
@@ -93,15 +94,17 @@
         runStart = null;
         if (present && lastSeen !== null && t - lastSeen >= RULE.off) { present = false; awaySince = lastSeen; }
       }
-      const s = present ? 0 : (t - awaySince >= RULE.limit ? 2 : 1);
-      st[t] = s; awayS[t] = awaySince; occS[t] = occSince;
+      if (row.items.length) noItemsSince = null; else if (noItemsSince === null) noItemsSince = t;
+      const isEmpty = !present && !raw && noItemsSince !== null && t - noItemsSince >= RULE.empty;
+      const s = present ? 0 : (isEmpty || t - awaySince >= RULE.limit ? 2 : 1);
+      st[t] = s; awayS[t] = awaySince; occS[t] = occSince; empty[t] = isEmpty ? 1 : 0;
       pend[t] = (!raw && present && lastSeen !== null) ? (t - lastSeen) : (raw && !present ? -(t - runStart + 1) : 0);
       if (s !== prev) {
-        events.push({ t, from: prev, to: s, awaySince, occSince, room: room.no, items: row.items.length });
+        events.push({ t, from: prev, to: s, awaySince, occSince, room: room.no, items: row.items.length, empty: isEmpty });
         prev = s;
       }
     }
-    return { st, awayS, occS, pend, events };
+    return { st, awayS, occS, pend, empty, events };
   }
 
   // ---------- 시나리오 생성 ----------
@@ -484,6 +487,7 @@
     if (s === 0) return { main: "사용 중", sub: `${clock(r.occS[t], false)}부터 · ${dur(t - r.occS[t])}째` };
     const away = t - r.awayS[t];
     if (s === 1) return { main: "자리 비움", sub: `비운 지 ${timer(away)} · 초록까지 ${timer(RULE.limit - away)}` };
+    if (r.empty[t]) return { main: "이용 가능", sub: "빈 책상 · 짐 없음" };
     return { main: "이용 가능", sub: `비운 지 ${dur(away)} · 바구니 이동 가능` };
   }
 
@@ -566,6 +570,7 @@
       ? `감지 영역 안에 사람 ${inside}명이 있어 <b>사용 중</b>입니다. ${clock(r.occS[t])}부터 계속 사람이 있었습니다. 문 앞 표시등은 빨강입니다.`
       : s === 1
         ? `<b>${since}</b>에 마지막으로 사람이 보였습니다. ${itemsTxt} 30분이 되는 <b>${clock(r.awayS[t] + RULE.limit)}</b>에 초록불로 바뀝니다. 그전까지는 짐에 손대지 않습니다.`
+        : r.empty[t] ? `사람도 짐도 ${RULE.empty}초 넘게 보이지 않아 <b>빈 책상</b>으로 판정했습니다. 30분을 기다리지 않고 바로 초록불입니다.`
         : `<b>${since}</b>부터 ${dur(away)} 동안 사람이 없습니다. ${itemsTxt} 학교 30분 규칙에 따라 <b>짐을 룸 앞 회색 바구니로 옮기고 사용할 수 있습니다.</b> (귀중품은 룸 안 한쪽에 둡니다)`;
     renderTimeline(t);
     renderEvents(t);
@@ -633,7 +638,7 @@
       const first = e.from < 0;
       const why = e.to === 0 ? `사람이 ${RULE.on}초 연속 보여 재석으로 판정`
         : e.to === 1 ? `마지막으로 보인 ${clock(e.awaySince)}부터 부재 (${RULE.off}초 확인 후 판정)`
-          : `${clock(e.awaySince)}부터 30분 경과`;
+          : e.empty ? `사람도 짐도 ${RULE.empty}초 연속 없어 빈 책상으로 판정 (바로 초록)` : `${clock(e.awaySince)}부터 30분 경과`;
       const main = el("div", "ev-main");
       main.innerHTML = `<div class="ev-title"><span class="mono">${clock(e.t)}</span>${first ? '<span class="pill s' + e.to + '">' + ST[e.to] + "</span> 기록 시작" : `<span class="pill s${e.from}">${ST[e.from]}</span><span class="arrow">→</span><span class="pill s${e.to}">${ST[e.to]}</span>`}</div>
         <div class="ev-sub">${first ? "14:00 시스템 기록 시작 시점 상태" : why}</div>
