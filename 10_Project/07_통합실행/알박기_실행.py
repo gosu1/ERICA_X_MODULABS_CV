@@ -12,7 +12,8 @@
      YOLO26s v2로 사람·테이블·짐 검출 → SAM 테이블 테두리 +15% 감지 범위 → 사람 박스 10% 이상 겹치면 재석
      → 2초 연속 보이면 사용중, 10초 안 보이면 부재, 30분이면 초록, 사람도 짐도 없으면 바로 초록
   3. 색이 바뀌면 신호등 주소로 보내고, CSV 기록과 사람 모자이크 스냅샷(1일 보관)을 남긴다.
-  4. http://localhost:8800 에서 14개 룸 현황과 모자이크 카메라 화면을 실시간으로 본다.
+  4. http://localhost:8800 에서 MVP 관제 대시보드와 같은 모양의 현황 화면(현황/ 폴더)을 본다.
+     룸 지도·KPI·알림·상태 기록·스냅샷은 1초마다, 선택한 룸의 카메라 화면은 실시간(모자이크)으로 갱신된다.
   5. 끝나면 한 바퀴(모든 룸 판정) 처리 시간 통계를 출력한다. 간격보다 짧아야 실시간으로 돌 수 있다.
 """
 
@@ -46,8 +47,11 @@ def first_existing(paths):
 SAM_DIR = first_existing([HERE / "sam_zone.py", HERE.parent / "05_BASE_MODEL" / "DEMO" / "SAM감지범위" / "sam_zone.py"]).parent
 sys.path.insert(0, str(SAM_DIR))
 from room_logic import RoomState, RoomTracker, Rules  # noqa: E402
-from run_sam import draw  # noqa: E402
-from sam_zone import SamZoneDetector  # noqa: E402
+from run_sam import blur, draw  # noqa: E402
+from sam_zone import ITEMS, SamZoneDetector  # noqa: E402
+
+WEB_DIR = HERE / "현황"                       # 현황 화면 (MVP 관제 대시보드 디자인)
+CODE = {RoomState.OCCUPIED: 0, RoomState.AWAY: 1, RoomState.FREE: 2}
 
 # 모델 파일: 이 폴더 → 팀 저장소(04_모델) → 개인 저장소(03_모델비교·파인튜닝) → 상위 폴더 순서로 찾는다
 DEFAULT_WEIGHTS = first_existing([
@@ -124,6 +128,22 @@ class Room:
     tracker: RoomTracker
     view: dict = field(default_factory=dict)     # 현황 화면용 마지막 판정 결과
     view_lock: threading.Lock = field(default_factory=threading.Lock)
+    events: list = field(default_factory=list)   # 상태 변화 기록 (최근 것이 앞)
+    runs: list = field(default_factory=list)     # 상태 기록 띠 [[시작 초, 상태 번호], ...]
+    since_wall: str = ""                         # 지금 상태가 시작된 시각
+
+    @property
+    def group(self):                             # "3층-1" → 층 "3층", 번호 "1"
+        return self.id.split("-")[0] if "-" in self.id else "룸"
+
+    @property
+    def no(self):
+        return self.id.split("-", 1)[1] if "-" in self.id else self.id
+
+    @property
+    def kind(self):
+        s = self.source.lower()
+        return "RTSP 카메라" if s.startswith(("rtsp", "http")) else "웹캠" if s.isdigit() else "영상 파일"
 
 
 class SharedModelDetector(SamZoneDetector):
@@ -144,6 +164,37 @@ def send_signal(url, room_id, color):
         print(f"  ! 신호등 전송 실패 ({room_id}, {url}): {e}")
 
 
+def overlay(frame, det, persons, inside, color, pad=0.25):
+    """실시간 화면용: 사람은 넓게 모자이크하고, 마지막 판정의 감지 범위·테이블·사람·짐을 MVP 색으로 겹친다.
+
+    판정은 1초마다라 사람이 움직이면 박스가 늦게 따라오므로, 모자이크는 박스보다 25% 넓게 씌운다.
+    """
+    out = frame.copy()
+    h, w = out.shape[:2]
+    for b, _ in persons:
+        bw, bh = b[2] - b[0], b[3] - b[1]
+        blur(out, (max(0, b[0] - bw * pad), max(0, b[1] - bh * pad), min(w, b[2] + bw * pad), min(h, b[3] + bh * pad)))
+    z = det.zone
+    if z is not None and z.zone_mask.shape == (h, w):
+        zone_bgr = (208, 127, 47)                                 # MVP --zone (#2f7fd0)
+        ov = out.copy(); ov[z.zone_mask] = zone_bgr
+        out = cv2.addWeighted(ov, 0.18, out, 0.82, 0)
+        cs, _ = cv2.findContours(z.zone_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(out, cs, -1, zone_bgr, 3)
+        if z.source == "sam":
+            ct, _ = cv2.findContours(z.table_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cv2.drawContours(out, ct, -1, (43, 138, 192), 2)        # MVP --table (#c08a2b)
+    ins = {tuple(b) for b, _ in inside}
+    for b, _ in persons:
+        c = (59, 59, 209) if tuple(b) in ins else (150, 150, 150)  # 범위 안 빨강, 밖 회색
+        cv2.rectangle(out, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), c, 2)
+    for b, _, _ in det.items_inside:
+        cv2.rectangle(out, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (196, 92, 123), 2)  # MVP --items
+    light = {"red": (59, 59, 209), "yellow": (18, 154, 217), "green": (87, 148, 30)}[color]
+    cv2.rectangle(out, (0, 0), (w - 1, h - 1), light, 6)         # 테두리 = 지금 신호등 색
+    return out
+
+
 def save_snapshot(vis, folder: Path, name: str, keep_sec=24 * 3600):
     """상태가 바뀐 순간 화면(사람 모자이크 된 것)을 저장하고, 하루 지난 파일은 지운다."""
     folder.mkdir(parents=True, exist_ok=True)
@@ -154,31 +205,8 @@ def save_snapshot(vis, folder: Path, name: str, keep_sec=24 * 3600):
 
 
 # ---------------------------------------------------------------- 현황 화면
-PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>알박기 감지 · 실시간 현황</title>
-<style>
-body{margin:0;font-family:"Malgun Gothic",sans-serif;background:#f3f2ec;color:#1d2a2c}
-header{background:#16343a;color:#eef3ef;padding:14px 20px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
-header b{font-size:20px} header span{opacity:.8;font-size:14px}
-main{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:16px}
-.c{background:#fbfbf7;border:1px solid #d6d8cf;border-radius:12px;overflow:hidden;border-top:8px solid #888}
-.c.red{border-top-color:#d9434f}.c.yellow{border-top-color:#e0a400}.c.green{border-top-color:#1f9d55}
-.c img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;background:#222}
-.c div{padding:8px 12px;font-size:14px} .c h3{margin:0;font-size:17px}
-</style>
-<header><b>알박기 감지 · 실시간 현황</b><span id="sum"></span><span id="perf"></span></header>
-<main id="g"></main>
-<script>
-async function tick(){
-  const s=await (await fetch('status.json',{cache:'no-store'})).json();
-  document.getElementById('sum').textContent=`사용중 ${s.count.red} · 자리비움 ${s.count.yellow} · 이용가능 ${s.count.green} · 활성화율 ${s.active_rate}%`;
-  document.getElementById('perf').textContent=`한 바퀴 ${s.cycle_ms}ms / 간격 ${s.interval_ms}ms`;
-  const g=document.getElementById('g');
-  g.innerHTML=s.rooms.map(r=>`<section class="c ${r.color}"><img src="frame/${encodeURIComponent(r.id)}.jpg?t=${Date.now()}" alt="${r.id} 카메라 화면 (사람 모자이크)">
-  <div><h3>${r.id} · ${r.state}</h3>${r.detail}</div></section>`).join('');
-}
-tick(); setInterval(tick,2000);
-</script></html>"""
+STATIC = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
+NO_WEB = "<!doctype html><meta charset=utf-8><p>현황 화면 파일(현황/index.html)이 없습니다. 알박기_실행.py 옆에 현황 폴더를 같이 두세요."
 
 
 def make_handler(app):
@@ -195,14 +223,26 @@ def make_handler(app):
 
         def do_GET(self):
             path = urllib.parse.unquote(self.path.split("?")[0])
-            if path in ("/", "/index.html"):
-                return self._send(PAGE.encode(), "text/html; charset=utf-8")
             if path == "/status.json":
                 return self._send(json.dumps(app.status(), ensure_ascii=False).encode(), "application/json; charset=utf-8")
+            if path.startswith("/stream/") and path.endswith(".mjpg"):
+                return app.stream(self, path[len("/stream/"):-5])
+            if path.startswith("/snap/"):                         # 상태 변화 스냅샷 (모자이크 된 것만 저장됨)
+                f = app.out / "스냅샷" / Path(path[len("/snap/"):]).name
+                if f.suffix == ".jpg" and f.exists():
+                    return self._send(f.read_bytes(), "image/jpeg")
+                return self.send_error(404)
             if path.startswith("/frame/") and path.endswith(".jpg"):
                 jpg = app.frame_jpg(path[len("/frame/"):-4])
                 if jpg is not None:
                     return self._send(jpg, "image/jpeg")
+                return self.send_error(404)
+            name = "index.html" if path in ("/", "") else Path(path).name
+            f = WEB_DIR / name
+            if f.suffix in STATIC and f.exists():
+                return self._send(f.read_bytes(), STATIC[f.suffix])
+            if name == "index.html":
+                return self._send(NO_WEB.encode(), "text/html; charset=utf-8")
             self.send_error(404)
     return H
 
@@ -215,7 +255,8 @@ class App:
 
         self.a = a
         self.device = 0 if torch.cuda.is_available() else "cpu"
-        print(f"모델 불러오는 중: {a.weights} (장치: {'GPU' if self.device == 0 else 'CPU'})")
+        self.device_name = torch.cuda.get_device_name(0) if self.device == 0 else "CPU"
+        print(f"모델 불러오는 중: {a.weights} (장치: {self.device_name})")
         yolo, sam = YOLO(a.weights), SAM(a.sam)
         blank = np.zeros((540, 960, 3), np.uint8)                 # 첫 판정이 늦지 않게 미리 한 번씩 돌려 둔다
         yolo.predict(blank, imgsz=960, device=self.device, verbose=False)
@@ -233,19 +274,74 @@ class App:
         self.announced: set[str] = set()          # 첫 판정을 이미 알린 룸
         self.out = Path(a.out)
         self.out.mkdir(parents=True, exist_ok=True)
+        self.t0, self.wall0 = time.monotonic(), time.time()        # 판정 시각 0초 = 프로그램을 켠 순간
+        self.stopping = False
+
+    def wall(self, sec):
+        """판정 시각(켠 뒤 몇 초)을 실제 시계 시각 문자열로."""
+        return datetime.fromtimestamp(self.wall0 + sec).strftime("%H:%M:%S")
 
     # 현황 화면
     def status(self):
-        rooms, cnt = [], {"red": 0, "yellow": 0, "green": 0}
+        a, now = self.a, time.monotonic() - self.t0
+        rooms = []
         for r in self.rooms:
             with r.view_lock:
                 v = dict(r.view)
-            color = v.get("color", "yellow")
-            cnt[color] = cnt.get(color, 0) + 1
-            rooms.append({"id": r.id, "state": v.get("state", "준비 중"), "color": color, "detail": v.get("detail", "")})
+            tr = r.tracker
+            judged = "now" in v
+            code = CODE[tr.state] if judged else -1
+            away = tr.away_sec(now) if judged else 0.0
+            pend = 0.0                                             # 양수: 부재 확인 중(초), 음수: 재석 확인 중(초)
+            if judged and tr.present and not v["inside"] and tr.last_seen is not None:
+                pend = now - tr.last_seen
+            elif judged and not tr.present and tr._seen_run_start is not None:
+                pend = -(now - tr._seen_run_start)
+            items = r.det.items_inside if judged else []
+            rooms.append({
+                "id": r.id, "no": r.no, "group": r.group, "kind": r.kind, "code": code,
+                "inside": len(v.get("inside", [])), "persons": len(v.get("persons", [])),
+                "items": len(items), "item_names": sorted({ITEMS[c] for _, _, c in items}),
+                "empty": bool(tr.empty), "away": away * a.time_scale, "limit": a.limit_min * 60,
+                "left": max(0.0, tr.rules.limit_sec - away) * a.time_scale,
+                "away_wall": self.wall(tr.away_since), "green_wall": self.wall(tr.away_since + tr.rules.limit_sec),
+                "since": r.since_wall, "pend": round(pend, 1),
+                "judged_ago": round(now - v["now"], 1) if judged else 0, "events": r.events[:20], "runs": r.runs,
+            })
         recent = self.cycles[-10:]
-        return {"rooms": rooms, "count": cnt, "active_rate": round(100 * cnt["red"] / max(1, len(self.rooms))),
-                "cycle_ms": round(statistics.median(recent)) if recent else 0, "interval_ms": int(self.a.interval * 1000)}
+        rules = self.rooms[0].tracker.rules if self.rooms else Rules()
+        return {"rooms": rooms, "clock": datetime.now().strftime("%H:%M:%S"), "date": datetime.now().strftime("%Y-%m-%d"),
+                "started": self.wall(0), "elapsed": now, "time_scale": a.time_scale, "device": self.device_name,
+                "cycle_ms": round(statistics.median(recent)) if recent else 0, "interval_ms": int(a.interval * 1000),
+                "rules": {"on": rules.on_sec, "off": rules.off_sec, "empty": rules.empty_sec}}
+
+    def stream(self, h: BaseHTTPRequestHandler, room_id, fps=15):
+        """선택한 룸의 카메라 화면을 실시간(MJPEG)으로 보낸다. 박스·감지 범위는 마지막 판정 결과."""
+        r = next((x for x in self.rooms if x.id == room_id), None)
+        if r is None:
+            return h.send_error(404)
+        h.send_response(200)
+        h.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+        h.send_header("Cache-Control", "no-store")
+        h.end_headers()
+        try:
+            while not self.stopping:
+                t = time.monotonic()
+                frame = r.camera.latest()
+                with r.view_lock:
+                    v = dict(r.view)
+                if frame is None or "now" not in v:                # 첫 판정 전에는 사람 위치를 몰라 화면을 보내지 않는다
+                    time.sleep(0.2)
+                    continue
+                vis = overlay(frame, r.det, v["persons"], v["inside"], v["color"])
+                if vis.shape[1] > 960:
+                    vis = cv2.resize(vis, (960, int(960 * vis.shape[0] / vis.shape[1])))
+                jpg = cv2.imencode(".jpg", vis, [cv2.IMWRITE_JPEG_QUALITY, 75])[1].tobytes()
+                h.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: " + str(len(jpg)).encode()
+                              + b"\r\n\r\n" + jpg + b"\r\n")
+                time.sleep(max(0.0, 1 / fps - (time.monotonic() - t)))
+        except OSError:
+            pass                                                   # 브라우저가 다른 룸을 고르거나 닫음
 
     def frame_jpg(self, room_id):
         r = next((x for x in self.rooms if x.id == room_id), None)
@@ -264,6 +360,7 @@ class App:
         for r in self.rooms:
             r.camera.start()
         server = None
+        self.t0, self.wall0 = time.monotonic(), time.time()
         if not a.no_web:
             server = ThreadingHTTPServer(("0.0.0.0", a.port), make_handler(self))
             threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -273,7 +370,7 @@ class App:
         log.writerow(["시각", "룸", "상태", "신호등", "범위 안 사람", "범위 안 짐", "빈 책상", "비운 시간(초)", "한 바퀴(ms)"])
 
         print(f"룸 {len(self.rooms)}개, {a.interval}초마다 판정 시작 (Ctrl+C로 종료)")
-        t0 = time.monotonic(); next_t = t0
+        t0 = self.t0; next_t = t0
         try:
             while True:
                 now = time.monotonic() - t0
@@ -298,9 +395,18 @@ class App:
                         stamp = datetime.now().strftime("%H:%M:%S")
                         print(f"[{stamp}] {r.id}: {prev.value} → {state.value} ({detail})")
                         send_signal(r.signal_url, r.id, color)
+                        snap = None
                         if not a.no_snapshot:
                             vis = draw(frame, r.det, persons, inside, r.tracker, now, a.time_scale, privacy=True)
-                            save_snapshot(vis, self.out / "스냅샷", f"{datetime.now():%Y%m%d-%H%M%S}_{r.id}_{state.value}.jpg")
+                            snap = f"{datetime.now():%Y%m%d-%H%M%S}_{r.id}_{state.value}.jpg"
+                            save_snapshot(vis, self.out / "스냅샷", snap)
+                        first = r.id not in self.announced
+                        r.events.insert(0, {"t": stamp, "ts": round(now, 1), "from": -1 if first else CODE[prev],
+                                            "to": CODE[state], "why": self.why(r, state), "snap": snap,
+                                            "empty": bool(r.tracker.empty), "away_wall": self.wall(r.tracker.away_since)})
+                        del r.events[50:]
+                        r.runs.append([round(now, 1), CODE[state]])
+                        r.since_wall = stamp
                         self.announced.add(r.id)
                     log.writerow([f"{now:.1f}", r.id, state.value, color, len(inside), len(r.det.items_inside),
                                   int(r.tracker.empty), f"{r.tracker.away_sec(now):.0f}", ""])
@@ -316,12 +422,24 @@ class App:
         except KeyboardInterrupt:
             pass
         finally:
+            self.stopping = True
             for r in self.rooms:
                 r.camera.alive = False
             log_f.close()
             if server:
                 server.shutdown()
             self.report()
+
+    def why(self, r: Room, state):
+        """상태가 바뀐 이유 (현황 화면 스냅샷 목록에 표시)."""
+        tr = r.tracker
+        if state is RoomState.OCCUPIED:
+            return f"사람이 {tr.rules.on_sec:g}초 연속 보여 재석으로 판정"
+        if state is RoomState.AWAY:
+            return f"마지막으로 보인 {self.wall(tr.away_since)}부터 부재 ({tr.rules.off_sec:g}초 확인 후 판정)"
+        if tr.empty:
+            return f"사람도 짐도 {tr.rules.empty_sec:g}초 연속 없어 빈 책상으로 판정 (바로 초록)"
+        return f"{self.wall(tr.away_since)}부터 30분 경과" + (f" (시연 배속 ×{self.a.time_scale:g})" if self.a.time_scale != 1 else "")
 
     def detail(self, r: Room, now, inside):
         tr = r.tracker

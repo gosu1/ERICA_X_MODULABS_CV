@@ -89,12 +89,13 @@
           <ol class="alerts" id="alerts"></ol>
         </div>
         <div class="card rules">
-          <div class="block-title"><span>판정 규칙</span><span class="hint">mvp/room_logic.py 와 같은 기준</span></div>
+          <div class="block-title"><span>판정 규칙</span><span class="hint">실제 판정 코드(room_logic.py · sam_zone.py)와 같은 기준</span></div>
           <dl>
-            <div><dt>재석</dt><dd>감지 영역 안에 사람이 <b>2초</b> 연속 보이면 사용 중 (오검출 방지)</dd></div>
+            <div><dt>재석</dt><dd>사람 박스의 <b>10%</b> 이상이 감지 범위와 겹친 채 <b>2초</b> 연속 보이면 사용 중 (오검출 방지)</dd></div>
             <div><dt>부재</dt><dd>사람이 <b>10초</b> 연속 안 보이면 부재. 부재 시각은 마지막으로 보인 순간 (가림·놓침 방지)</dd></div>
             <div><dt>초록불</dt><dd>부재가 <b>30분</b> 이어지면 이용 가능 (학교 30분 자리 비움 규칙)</dd></div>
-            <div><dt>감지 영역</dt><dd>가장 큰 테이블 박스를 가로·세로 <b>30%</b> 넓힌 영역. 룸마다 손으로 그리지 않음</dd></div>
+            <div><dt>빈 책상</dt><dd>사람도 짐도 <b>10초</b> 연속 없으면 30분을 기다리지 않고 <b>바로 초록불</b></dd></div>
+            <div><dt>감지 범위</dt><dd>SAM으로 딴 테이블 테두리를 짧은 변의 <b>15%</b>만큼 부풀린 범위. 룸마다 손으로 그리지 않음. (이 시뮬레이션 화면은 SAM 도입 전 데이터라 테이블 박스 +30%로 그려져 있습니다)</dd></div>
             <div><dt>모델</dt><dd>YOLO26s를 스터디룸 영상으로 파인튜닝 (사람·테이블·엎드린 사람 시험 100%)</dd></div>
             <div><dt>보관</dt><dd>영상 저장 없음. 상태가 바뀐 순간만 사람 모자이크로 <b>1일</b> 보관 후 삭제, 이후 룸·시각·있음/없음만 남김</dd></div>
           </dl>
@@ -118,7 +119,7 @@
           <div class="cam-confirm" id="camConfirm" hidden></div>
         </div>
         <div class="layers" role="group" aria-label="화면에 겹쳐 보기">
-          <label><input type="checkbox" id="lyZone" checked><span class="sw zone"></span>감지 영역 (테이블 +30%)</label>
+          <label><input type="checkbox" id="lyZone" checked><span class="sw zone"></span>감지 영역 (시뮬레이션: 테이블 박스 +30%)</label>
           <label><input type="checkbox" id="lyTable" checked><span class="sw table"></span>테이블</label>
           <label><input type="checkbox" id="lyPerson" checked><span class="sw person"></span>사람</label>
           <label><input type="checkbox" id="lyItems"><span class="sw items"></span>짐</label>

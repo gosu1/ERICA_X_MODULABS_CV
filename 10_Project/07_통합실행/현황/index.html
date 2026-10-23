@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>알박기 관제 · 실시간</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar live">
+  <div class="brand">
+    <span class="lamp-trio" aria-hidden="true"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+    <div>
+      <div class="eyebrow">한양대 ERICA 융합교육관</div>
+      <h1>스터디룸 관제</h1>
+    </div>
+  </div>
+
+  <div class="clock-block">
+    <div class="clock-label" id="dayLabel">실시간 판정</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <div class="live-perf" id="perf"></div>
+
+  <div class="privacy" title="기획서 개인정보 원칙">
+    <b>개인정보</b> 얼굴 미식별 · 영상 미저장 · 사람 모자이크 · 스냅샷 1일 후 삭제
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" class="on">관제</button>
+  <span class="tab-note" id="tabNote"></span>
+</nav>
+
+<main>
+  <section class="tab-panel">
+    <div class="kpis" id="kpis"></div>
+    <div class="ops-grid">
+      <div class="left-col">
+        <div class="floors" id="floors"></div>
+        <div class="card">
+          <div class="block-title"><span>알림</span><span class="hint">초록불 · 초록불 뒤 입실 · 누르면 그 룸으로 이동</span></div>
+          <ol class="alerts" id="alerts"></ol>
+        </div>
+        <div class="card rules">
+          <div class="block-title"><span>판정 규칙</span><span class="hint">room_logic.py · sam_zone.py 와 같은 기준</span></div>
+          <dl>
+            <div><dt>재석</dt><dd>사람 박스의 <b>10%</b> 이상이 감지 범위와 겹친 채 <b>2초</b> 연속 보이면 사용 중 (오검출 방지)</dd></div>
+            <div><dt>부재</dt><dd>사람이 <b>10초</b> 연속 안 보이면 부재. 부재 시각은 마지막으로 보인 순간 (가림·놓침 방지)</dd></div>
+            <div><dt>초록불</dt><dd>부재가 <b>30분</b> 이어지면 이용 가능 (학교 30분 자리 비움 규칙)</dd></div>
+            <div><dt>빈 책상</dt><dd>사람도 짐도 <b>10초</b> 연속 없으면 30분을 기다리지 않고 <b>바로 초록불</b></dd></div>
+            <div><dt>감지 범위</dt><dd>SAM으로 딴 테이블 테두리를 짧은 변의 <b>15%</b>만큼 부풀린 범위. 룸마다 손으로 그리지 않음</dd></div>
+            <div><dt>판정 주기</dt><dd>모든 룸을 <b>1초</b>마다 한 번씩 판정. 카메라 화면은 판정과 따로 실시간으로 보여 줌</dd></div>
+            <div><dt>보관</dt><dd>영상 저장 없음. 상태가 바뀐 순간만 사람 모자이크로 <b>1일</b> 보관 후 삭제, 이후 룸·시각·상태만 남김</dd></div>
+          </dl>
+        </div>
+      </div>
+      <div class="detail" id="detail">
+        <div class="detail-head">
+          <div>
+            <div class="eyebrow" id="dType"></div>
+            <h2 id="dName">-</h2>
+          </div>
+          <div class="state-chip" id="dState">-</div>
+        </div>
+
+        <div class="cam-wrap">
+          <img id="cam" alt="선택한 룸 카메라 화면 (사람 모자이크)">
+          <div class="cam-wait" id="camWait">카메라 연결 중…</div>
+          <div class="cam-badges">
+            <span class="badge live">실시간 · 사람 모자이크</span>
+            <span class="badge" id="camJudge">-</span>
+          </div>
+          <div class="cam-confirm" id="camConfirm" hidden></div>
+        </div>
+        <div class="layers" aria-label="화면 표시">
+          <span><span class="sw zone-live"></span> 감지 범위 (SAM 테두리 +15%)</span>
+          <span><span class="sw table"></span> 테이블 테두리</span>
+          <span><span class="sw person"></span> 범위 안 사람</span>
+          <span><span class="sw items"></span> 범위 안 짐</span>
+        </div>
+
+        <div class="judge">
+          <div class="judge-row">
+            <div class="judge-cell"><div class="k">감지 범위 안 사람</div><div class="v" id="jIn">-</div></div>
+            <div class="judge-cell"><div class="k">감지된 짐</div><div class="v" id="jItems">-</div></div>
+            <div class="judge-cell"><div class="k">비운 시간</div><div class="v mono" id="jAway">-</div></div>
+            <div class="judge-cell"><div class="k">초록불까지</div><div class="v mono" id="jLeft">-</div></div>
+          </div>
+          <div class="limit-bar" aria-hidden="true"><i id="limitFill"></i></div>
+          <p class="judge-text" id="jText">-</p>
+        </div>
+
+        <div class="timeline-block">
+          <div class="block-title"><span>오늘 상태 기록</span><span class="hint">프로그램을 켠 뒤부터 지금까지</span></div>
+          <canvas id="timeline" height="56" aria-label="선택한 룸의 시간대별 상태"></canvas>
+          <div class="axis" id="tlAxis"></div>
+        </div>
+
+        <div class="events-block">
+          <div class="block-title"><span>상태 변화 스냅샷</span><span class="hint">상태가 바뀐 순간만 모자이크로 저장 · 1일 후 자동 삭제</span></div>
+          <ol class="events" id="events"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
