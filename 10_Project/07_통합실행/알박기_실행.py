@@ -36,13 +36,26 @@ import cv2
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-SAM_DIR = HERE.parent / "05_BASE_MODEL" / "DEMO" / "SAM감지범위"
+
+
+def first_existing(paths):
+    return next((p for p in paths if p.exists()), paths[0])
+
+
+# 판정 코드(room_logic·sam_zone·run_sam): 이 폴더에 같이 있으면 그것을, 없으면 팀 저장소 구조에서 찾는다
+SAM_DIR = first_existing([HERE / "sam_zone.py", HERE.parent / "05_BASE_MODEL" / "DEMO" / "SAM감지범위" / "sam_zone.py"]).parent
 sys.path.insert(0, str(SAM_DIR))
 from room_logic import RoomState, RoomTracker, Rules  # noqa: E402
 from run_sam import draw  # noqa: E402
 from sam_zone import SamZoneDetector  # noqa: E402
 
-DEFAULT_WEIGHTS = HERE.parent / "04_모델" / "알박기_yolo26s_v2.pt"
+# 모델 파일: 이 폴더 → 팀 저장소(04_모델) → 개인 저장소(03_모델비교·파인튜닝) → 상위 폴더 순서로 찾는다
+DEFAULT_WEIGHTS = first_existing([
+    HERE / "알박기_yolo26s_v2.pt",
+    HERE.parent / "04_모델" / "알박기_yolo26s_v2.pt",
+    HERE.parent / "03_모델비교·파인튜닝" / "파인튜닝" / "모델" / "알박기_yolo26s_v2.pt",
+    HERE.parent / "알박기_yolo26s_v2.pt",
+])
 
 
 # ---------------------------------------------------------------- 카메라
@@ -376,6 +389,12 @@ def main():
     ap.add_argument("--no-web", action="store_true", help="실시간 현황 화면을 띄우지 않음")
     ap.add_argument("--no-snapshot", action="store_true")
     a = ap.parse_args()
+    if not Path(a.weights).exists():
+        raise SystemExit(f"모델 파일을 찾을 수 없습니다: {a.weights} · --weights 로 알박기_yolo26s_v2.pt 위치를 알려 주세요.")
+    if a.rooms and not Path(a.rooms).exists():
+        raise SystemExit(f"룸 설정 파일이 없습니다: {a.rooms} · rooms.example.json을 복사해 rooms.json을 만들고 카메라 주소를 적어 주세요.")
+    if a.demo_video and not Path(a.demo_video).exists():
+        raise SystemExit(f"영상 파일이 없습니다: {a.demo_video}")
     App(a).run()
 
 
