@@ -47,7 +47,7 @@ class SamZoneDetector:
     person_conf: float = 0.35
     table_conf: float = 0.25
     grow: float = 0.15               # 테이블 짧은 변 길이의 몇 배만큼 바깥으로 부풀릴지
-    overlap: float = 0.15            # 사람 박스 면적 중 감지 범위와 겹쳐야 하는 비율 (룸 판정 실측 후 15%로 결정)
+    overlap: float = 0.10            # 사람 박스 면적 중 감지 범위와 겹쳐야 하는 비율 (룸 판정 실측 후 10%로 결정)
     move_iou: float = 0.7            # 저장된 테이블과 이보다 덜 겹치면 '위치가 다르다'
     move_sec: float = 30.0           # 위치가 다른 상태가 이만큼 이어지면 이동으로 봄
     item_conf: float = 0.25          # 짐 신뢰도 기준

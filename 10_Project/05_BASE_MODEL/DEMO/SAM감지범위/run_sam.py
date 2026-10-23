@@ -108,7 +108,7 @@ def main():
     ap.add_argument("--weights", default=str(ROOT / "알박기_yolo26s_v2.pt"))
     ap.add_argument("--sam", default="sam2.1_t.pt", help="SAM 가중치 (처음 실행 시 자동으로 받음)")
     ap.add_argument("--grow", type=float, default=0.15, help="테이블 짧은 변의 몇 배만큼 부풀릴지")
-    ap.add_argument("--overlap", type=float, default=0.15, help="사람 박스 중 감지 범위와 겹쳐야 하는 비율")
+    ap.add_argument("--overlap", type=float, default=0.10, help="사람 박스 중 감지 범위와 겹쳐야 하는 비율")
     ap.add_argument("--room", default="3층-1")
     ap.add_argument("--limit-min", type=float, default=30)
     ap.add_argument("--time-scale", type=float, default=1.0)
