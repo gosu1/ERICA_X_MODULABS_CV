@@ -4,8 +4,8 @@ __pycache__/
 *.mp4
 frames/
 snapshots/
-최종보고서/02_데이터·실험/synthetic/out*/*.jpg
+통합 코드모음/02_데이터·실험/synthetic/out*/*.jpg
 *.avi
 *.tar
 *.mat
-최종보고서/06_통합실행/결과/
+통합 코드모음/06_통합실행/결과/
