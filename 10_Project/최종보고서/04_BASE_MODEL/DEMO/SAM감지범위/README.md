@@ -28,8 +28,8 @@
 이 폴더에서 실행합니다. SAM 가중치(`sam2.1_t.pt`, 약 78MB)는 처음 실행할 때 공식 Ultralytics 저장소에서 자동으로 받습니다.
 
 ```bash
-python run_sam.py --source 1차.mp4 --weights ../../../04_모델/알박기_yolo26s_v2.pt --time-scale 60 --snap 결과
-python run_sam.py --source 0 --weights ../../../04_모델/알박기_yolo26s_v2.pt   # 웹캠, 실제 30분 기준
+python run_sam.py --source 1차.mp4 --weights ../../../03_모델/알박기_yolo26s_v2.pt --time-scale 60 --snap 결과
+python run_sam.py --source 0 --weights ../../../03_모델/알박기_yolo26s_v2.pt   # 웹캠, 실제 30분 기준
 ```
 
 | 옵션 | 기본값 | 설명 |
